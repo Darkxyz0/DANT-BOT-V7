@@ -19,7 +19,7 @@ async function startDanteV8() {
             const from = anu.id;
             const topo = "╔═══════ ✧ ⚔️ ✧ ═══════╗\n";
             const rodape = "\n╚═══════ ✧ 🍕 ✧ ═══════╝\n─── *𝕯𝖆𝖓𝖙𝖊 𝕬𝖌𝖊𝖓𝖈𝖞 V8* ───";
-            const boasVindas = "Novo recruta detectado: @${anu.participants[0].split('@')[0]}. Entre por sua conta e risco.";
+            const boasVindas = "Novo alvo detectado: @${anu.participants[0].split('@')[0]}. Entre por sua conta e risco.";
             if (fs.existsSync('./boasvindas.mp4')) {
                 await client.sendMessage(from, { video: fs.readFileSync('./boasvindas.mp4'), caption: topo + boasVindas + rodape, mentions: [anu.participants[0]], gifPlayback: true });
             }
@@ -71,8 +71,6 @@ async function startDanteV8() {
                 await enviar(`🏆 *RANK DE AURA*\n\nUsuário: ${target}\nNível: ${rdm}.000\nDante diz: Medíocre.`, './rankaura.mp4', true); break;
             case 'todeolho':
                 await enviar(`👁️ ${msg.pushName} está de olho em ${target}! Nada escapa da Agência.`, './todeolho.mp4', true); break;
-            case 'farmaraura':
-                await enviar(`✨ ${msg.pushName} está concentrando poder absoluto!`, './farmaraura.mp4', true); break;
             case 'beijo': await enviar(`💋 ${msg.pushName} beijou ${target}. Dante viu tudo.`, './beijo.mp4', true); break;
             case 'tapa': await enviar(`💥 ${msg.pushName} meteu a mão em ${target}!`, './tapa.mp4', true); break;
             case 'dançar': await enviar(`💃 ${msg.pushName} e ${target} na pista!`, './dançar.mp4', true); break;
