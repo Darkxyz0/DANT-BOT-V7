@@ -22,7 +22,7 @@ async function startDanteV8() {
     };
 
     client.ev.on('connection.update', (u) => {
-        if (u.connection === 'open') console.log('\n\x1b[32m%s\x1b[0m', '🚀 DANTE-V8: AUTO-SYNC ATIVADO!');
+        if (u.connection === 'open') console.log('\n\x1b[32m%s\x1b[0m', '🚀 DANTE-V8: MENUS ATUALIZADOS!');
         if (u.connection === 'close') startDanteV8();
     });
 
@@ -55,20 +55,52 @@ async function startDanteV8() {
             } else {
                 await client.sendMessage(from, { text: topo + texto + rodape, mentions });
             }
-            syncGitHub(); // Atualiza o site automaticamente após cada comando
+            syncGitHub();
         };
 
         switch(cmd) {
-            case 'menu': await enviar("\n   *🏢 QUARTEL GENERAL*\n\n┝ .menuadm\n┝ .menuaura\n┝ .menubrincadeiras", './menu.jpg'); break;
-            case 'menuaura': await enviar("*🌑 SETOR DE AURA*\n\n┝ .farmaraura\n┝ .rankaura\n┝ .statusaura\n┝ .todeolho", './aura.jpg'); break;
-            case 'menubrincadeiras': await enviar("*🧸 SETOR DE INTERAÇÃO*\n\n┝ .beijo\n┝ .tapa\n┝ .chutar\n┝ .matar\n┝ .dançar\n┝ .comer\n┝ .rosa\n┝ .gado\n┝ .gay\n┝ .lindo", './brincadeira.jpg'); break;
-            case 'beijo': await enviar(`💋 ${msg.pushName} beijou ${target}.`, './beijo.mp4', true); break;
+            case 'menu':
+                const menuCompleto = `
+   *🏢 QUARTEL GENERAL*
+   
+Olá, ${msg.pushName}. Aqui estão suas ordens:
+
+*🌑 SETOR DE AURA*
+┝ .farmaraura
+┝ .rankaura
+┝ .statusaura
+┝ .todeolho
+
+*🧸 INTERAÇÃO & BRINCADEIRA*
+┝ .beijo    ┝ .tapa
+┝ .chutar   ┝ .matar
+┝ .dançar   ┝ .comer
+┝ .rosa     ┝ .molestar
+┝ .gado     ┝ .gay
+┝ .lindo    ┝ .corno
+
+*🔮 MAGIA & UTILITÁRIOS*
+┝ .menumagia
+┝ .menubot
+┝ .menuadm
+
+*📊 STATUS DO AGENTE*
+• Aura: ${rdm}%
+• Patente: Agente Especial`;
+                await enviar(menuCompleto, './menu.jpg');
+                break;
+
+            // --- COMANDOS MANTIDOS ---
+            case 'beijo': await enviar(`💋 ${msg.pushName} beijou ${target}. Dante está observando.`, './beijo.mp4', true); break;
             case 'tapa': await enviar(`💥 ${msg.pushName} deu um tapa em ${target}!`, './tapa.mp4', true); break;
-            case 'rosa': await enviar(`🌹 ${msg.pushName} deu uma rosa para ${target}.`, './dante.mp4', true); break;
+            case 'rosa': await enviar(`🌹 ${msg.pushName} entregou uma rosa para ${target}.`, './dante.mp4', true); break;
             case 'rankaura': await enviar(`🏆 *RANK DE AURA*\n\nUsuário: ${target}\nNível: ${rdm}.000`, './rankaura.mp4', true); break;
-            case 'todeolho': await enviar(`👁️ ${msg.pushName} vigia ${target}!`, './todeolho.mp4', true); break;
+            case 'todeolho': await enviar(`👁️ ${msg.pushName} está de olho em ${target}!`, './todeolho.mp4', true); break;
             case 'gado': await enviar(`🐂 ${target} é ${rdm}% GADO!`, rdm > 50 ? './gado2.jpg' : './gado1.jpg'); break;
             case 'lindo': await enviar(`✨ ${target} é ${rdm}% Lindo(a)!`, rdm > 50 ? './lindo1.mp4' : './lindo2.mp4', true); break;
+            case 'gay': await enviar(`🌈 ${target} é ${rdm}% Gay.`, './gay.jpg'); break;
+            case 'dançar': await enviar(`💃 ${msg.pushName} e ${target} na pista!`, './dançar.mp4', true); break;
+            case 'comer': await enviar(`🍕 ${msg.pushName} está devorando ${args[0] || "tudo"}!`, './comer.mp4', true); break;
         }
     });
 }
