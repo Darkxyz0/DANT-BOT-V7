@@ -10,25 +10,26 @@ async function startDanteV8() {
         version,
         logger: pino({ level: 'silent' }),
         auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })) },
-        browser: ["Dante-V8", "Chrome", "1.0.0"]
+        browser: ["Dante-V8", "Chrome", "1.0.0"],
+        printQRInTerminal: true
     });
 
     client.ev.on('creds.update', saveCreds);
 
+    // Sincronização em segundo plano para não travar o bot
     const syncGitHub = () => {
-        exec('git add . && git commit -m "Correção de Comandos e GIFs" && git push origin main --force', (err) => {
-            if (!err) console.log('✅ Agência Sincronizada!');
-        });
+        exec('git add . && git commit -m "Auto-update" && git push origin main --force');
     };
 
     client.ev.on('connection.update', (u) => {
-        if (u.connection === 'open') console.log('\n\x1b[32m%s\x1b[0m', '🚀 DANTE-V8: TODOS OS COMANDOS E GIFS ATIVOS!');
+        if (u.connection === 'open') console.log('\n\x1b[32m%s\x1b[0m', '🚀 DANTE-V8: VELOCIDADE MÁXIMA ATIVADA!');
         if (u.connection === 'close') startDanteV8();
     });
 
     client.ev.on('messages.upsert', async m => {
         const msg = m.messages[0];
         if (!msg.message || msg.key.fromMe) return;
+
         const from = msg.key.remoteJid;
         const type = Object.keys(msg.message)[0];
         const body = (type === 'conversation') ? msg.message.conversation : 
@@ -51,58 +52,31 @@ async function startDanteV8() {
         const enviar = async (texto, path = null, isVid = false) => {
             if (path && fs.existsSync(path)) {
                 const media = isVid ? { video: fs.readFileSync(path), gifPlayback: true } : { image: fs.readFileSync(path) };
-                await client.sendMessage(from, { ...media, caption: topo + texto + rodape, mentions });
+                client.sendMessage(from, { ...media, caption: topo + texto + rodape, mentions });
             } else {
-                await client.sendMessage(from, { text: topo + texto + rodape, mentions });
+                client.sendMessage(from, { text: topo + texto + rodape, mentions });
             }
-            syncGitHub();
+            setTimeout(syncGitHub, 2000); // Sincroniza 2 segundos depois para não atrasar a resposta
         };
 
         switch(cmd) {
             case 'menu':
-                const menuTxt = `*🏢 QUARTEL GENERAL*\n\nOlá, ${msg.pushName}.\n\n*🌑 AURA*\n┝ .rankaura\n┝ .statusaura\n┝ .todeolho\n\n*🧸 INTERAÇÃO*\n┝ .matar\n┝ .chutar\n┝ .beijo\n┝ .tapa\n┝ .dançar\n┝ .comer\n┝ .rosa\n\n*📊 STATUS*\n┝ .gado\n┝ .lindo\n┝ .gay`;
-                await enviar(menuTxt, './menu.jpg');
+                await enviar(`*🏢 QUARTEL GENERAL*\n\n*🌑 AURA*\n┝ .rankaura\n┝ .statusaura\n┝ .todeolho\n\n*🧸 INTERAÇÃO*\n┝ .matar  .chutar\n┝ .beijo  .tapa\n┝ .dançar .comer\n┝ .rosa   .chamego\n\n*📊 STATUS*\n┝ .gado  .lindo  .gay`, './menu.jpg');
                 break;
 
-            // --- CORREÇÃO DOS COMANDOS DE INTERAÇÃO COM GIF ---
-            case 'matar':
-                const vidMatar = fs.existsSync('./matar1.mp4') ? (Math.random() > 0.5 ? './matar1.mp4' : './matar2.mp4') : './matar.mp4';
-                await enviar(`⚔️ ${msg.pushName} eliminou ${target}. Alvo riscado da lista.`, vidMatar, true);
-                break;
-            case 'chutar':
-                const vidChutar = fs.existsSync('./chutar1.mp4') ? (Math.random() > 0.5 ? './chutar1.mp4' : './chutar2.mp4') : './chutar.mp4';
-                await enviar(`👟 ${msg.pushName} deu um chute em ${target}!`, vidChutar, true);
-                break;
-            case 'comer':
-                await enviar(`🍕 ${msg.pushName} está a devorar ${args[0] || "tudo"}!`, './comer.mp4', true);
-                break;
-            case 'dançar':
-                await enviar(`💃 ${msg.pushName} e ${target} estão a dominar a pista!`, './dançar.mp4', true);
-                break;
-            case 'beijo': 
-                await enviar(`💋 ${msg.pushName} beijou ${target}. Dante está de olho.`, './beijo.mp4', true); 
-                break;
-            case 'tapa': 
-                await enviar(`💥 ${msg.pushName} meteu a mão em ${target}!`, './tapa.mp4', true); 
-                break;
-            case 'rosa': 
-                await enviar(`🌹 ${msg.pushName} deu uma rosa para ${target}.`, './dante.mp4', true); 
-                break;
-            case 'rankaura': 
-                await enviar(`🏆 *RANK DE AURA*\n\nUsuário: ${target}\nNível: ${rdm}.000`, './rankaura.mp4', true); 
-                break;
-            case 'todeolho': 
-                await enviar(`👁️ ${msg.pushName} está a vigiar ${target}!`, './todeolho.mp4', true); 
-                break;
-            case 'gado': 
-                await enviar(`🐂 ${target} é ${rdm}% GADO!`, rdm > 50 ? './gado2.jpg' : './gado1.jpg'); 
-                break;
-            case 'lindo': 
-                await enviar(`✨ ${target} é ${rdm}% Lindo(a)!`, rdm > 50 ? './lindo1.mp4' : './lindo2.mp4', true); 
-                break;
-            case 'gay': 
-                await enviar(`🌈 ${target} é ${rdm}% Gay.`, './gay.jpg'); 
-                break;
+            case 'matar': await enviar(`⚔️ ${msg.pushName} eliminou ${target}!`, fs.existsSync('./matar1.mp4') ? './matar1.mp4' : './matar.mp4', true); break;
+            case 'chutar': await enviar(`👟 ${msg.pushName} chutou ${target}!`, './chutar.mp4', true); break;
+            case 'beijo': await enviar(`💋 ${msg.pushName} beijou ${target}!`, './beijo.mp4', true); break;
+            case 'tapa': await enviar(`💥 ${msg.pushName} deu um tapa em ${target}!`, './tapa.mp4', true); break;
+            case 'dançar': await enviar(`💃 ${msg.pushName} e ${target} na pista!`, './dançar.mp4', true); break;
+            case 'comer': await enviar(`🍕 ${msg.pushName} está comendo ${args[0] || "algo"}!`, './comer.mp4', true); break;
+            case 'rosa': await enviar(`🌹 Uma rosa para ${target}!`, './dante.mp4', true); break;
+            case 'chamego': await enviar(`🧸 ${msg.pushName} deu um chamego em ${target}!`, './chamego.mp4', true); break;
+            case 'rankaura': await enviar(`🏆 *RANK*\n\nAlvo: ${target}\nNível: ${rdm}.000`, './rankaura.mp4', true); break;
+            case 'todeolho': await enviar(`👁️ De olho em ${target}...`, './todeolho.mp4', true); break;
+            case 'gado': await enviar(`🐂 ${target} é ${rdm}% gado.`, './gado1.jpg'); break;
+            case 'lindo': await enviar(`✨ ${target} é ${rdm}% lindo.`, './lindo1.mp4', true); break;
+            case 'gay': await enviar(`🌈 ${target} é ${rdm}% gay.`, './gay.jpg'); break;
         }
     });
 }
