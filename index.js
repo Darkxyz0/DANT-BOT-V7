@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
 
@@ -12,71 +12,70 @@ async function startDanteV8() {
         browser: ["Dante-V8", "Chrome", "1.0.0"]
     });
 
-    const DONO = "5519987054682@s.whatsapp.net";
     client.ev.on('creds.update', saveCreds);
-
-    client.ev.on('connection.update', (u) => {
-        if (u.connection === 'open') console.log('\n\x1b[32m%s\x1b[0m', '🚀 DANTE-V8: SETOR PERIGO ATUALIZADO COM BOQUETE E TRANSAR!');
-        if (u.connection === 'close') startDanteV8();
-    });
 
     client.ev.on('messages.upsert', async m => {
         const msg = m.messages[0];
-        if (!msg || !msg.message || msg.key.fromMe) return;
+        if (!msg.message || msg.key.fromMe) return;
 
         const from = msg.key.remoteJid;
         const pushname = msg.pushName || "Agente";
-        const isDono = msg.key.participant === DONO || msg.key.remoteJid === DONO;
-        const content = msg.message.conversation || msg.message.extendedTextMessage?.text || 
-                        msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || "";
+        const messageContent = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+        const body = messageContent.trim();
+        
+        if (!body.startsWith('.')) return;
 
-        if (typeof content !== 'string' || !content.startsWith('.')) return;
-
-        const args = content.slice(1).trim().split(/ +/g);
+        const args = body.slice(1).trim().split(/ +/g);
         const cmd = args.shift().toLowerCase();
-        const mention = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0] || null;
-        let targetJid = mention || msg.key.participant || msg.key.remoteJid;
-        let targetName = mention ? "@" + mention.split('@')[0] : pushname;
-        let mentions = [targetJid];
+
+        // --- 🛡️ LÓGICA DE ALVO CORRIGIDA (ANTI-BUG) ---
+        const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+        const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+        
+        // Prioridade: 1. Menção direta | 2. Mensagem respondida | 3. Ninguém (null)
+        let targetJid = mentioned || (msg.message.extendedTextMessage?.contextInfo?.participant) || null;
+        
+        // Se não houver alvo, o comando não "finge" que mencionou
+        let targetName = targetJid ? "@" + targetJid.split('@')[0] : "alguém";
+        let mentions = targetJid ? [targetJid] : [];
 
         const rdm = Math.floor(Math.random() * 101);
-        const bTop = "┏━━━━━━━━━━━━━━━━━━━━┓\n";
-        const bMid = "┃  ⚔️  *DANTE AGENCY V8* ⚔️\n┣━━━━━━━━━━━━━━━━━━━━┛\n";
-        const bBot = "\n┗━━━━━━━━━━━━━━━━━━━━┛";
+        const topo = "╔═══════ ✧ ⚔️ ✧ ═══════╗\n";
+        const rodape = "\n╚═══════ ✧ 🍕 ✧ ═══════╝\n─── *𝕯𝖆𝖓𝖙𝖊 𝕬𝖌𝖊𝖓𝖈𝖞 V8* ───";
 
         const enviar = async (texto, path = null, isVid = false) => {
-            let caption = bTop + bMid + texto + bBot;
-            if (path && fs.existsSync(path)) {
-                const buffer = fs.readFileSync(path);
-                await client.sendMessage(from, { [isVid ? 'video' : 'image']: buffer, caption, mentions, gifPlayback: isVid });
-            } else {
-                await client.sendMessage(from, { text: caption + "\n\n(Ficheiro " + path + " não encontrado)", mentions });
-            }
+            let caption = topo + texto + rodape;
+            try {
+                if (path && fs.existsSync(path)) {
+                    const buffer = fs.readFileSync(path);
+                    if (isVid) await client.sendMessage(from, { video: buffer, caption, mentions, gifPlayback: true });
+                    else await client.sendMessage(from, { image: buffer, caption, mentions });
+                } else {
+                    await client.sendMessage(from, { text: caption, mentions });
+                }
+            } catch { await client.sendMessage(from, { text: caption, mentions }); }
         };
 
+        // Exemplo de comando corrigido
         switch(cmd) {
-            case 'menuperigo':
-                await enviar("🔞 *SETOR: ARQUIVOS CONFIDENCIAIS*\n\n🔥 .safado\n🔥 .transar\n🔥 .boquete\n🔥 .pau\n🔥 .tesao", './perigo.jpg');
-                break;
-
-            case 'transar':
-                const vTransar = Math.random() > 0.5 ? './transar1.mp4' : './transar2.mp4';
-                await enviar("🔞 *Dante:* 'Isso vai ser um massacre... de prazer!'\n" + pushname + " e " + targetName + " foram pro abate!", vTransar, true);
-                break;
-
-            case 'boquete':
-                await enviar("🔞 *Dante:* 'Abaixa que lá vem bala!'\n" + targetName + " está fazendo um serviço especial para " + pushname + "!", './boquete.mp4', true);
-                break;
-
-            case 'safado':
-                const vSafado = Math.random() > 0.5 ? './safadeza.mp4' : './safadeza2.mp4';
-                await enviar("😏 *Dante:* 'Seu nível de perversão é impressionante.'\n*" + targetName + "* é *" + rdm + "%* safado(a)!", vSafado, true);
+            case 'tapa':
+                if (!targetJid) return await client.sendMessage(from, { text: "❌ Marque alguém ou responda a uma mensagem para dar um tapa!" });
+                await enviar(`💥 *${pushname}* deu um tapa em *${targetName}*!`, './tapa.mp4', true);
                 break;
                 
+            case 'gado':
+                await enviar(`🐂 Análise de *${targetName}*: ${rdm}% Gado.`, './gado.jpg');
+                break;
+
             case 'menu':
-                await enviar("*STATUS:* " + (isDono ? "👑 DIRETOR" : "👤 AGENTE") + "\n🔹 .menuaura\n🔹 .menubrincadeiras\n🔹 .menuperigo\n🔹 .menustatus", './menu.jpg');
+                await enviar(`Olá, *${pushname}*! Use os setores:\n.menuaura\n.menuinter\n.menustatus`);
                 break;
         }
+    });
+
+    client.ev.on('connection.update', (u) => {
+        if (u.connection === 'open') console.log('🚀 DANTE-V8: BUG DE MENÇÃO CORRIGIDO!');
+        if (u.connection === 'close') startDanteV8();
     });
 }
 startDanteV8();
