@@ -16,7 +16,7 @@ async function startDanteV8() {
     client.ev.on('creds.update', saveCreds);
 
     client.ev.on('connection.update', (u) => {
-        if (u.connection === 'open') console.log('\n\x1b[32m%s\x1b[0m', '🚀 DANTE-V8: AGÊNCIA ONLINE COM TODAS AS FUNÇÕES!');
+        if (u.connection === 'open') console.log('\n\x1b[32m%s\x1b[0m', '🚀 DANTE-V8: AGÊNCIA ONLINE E BLINDADA!');
         if (u.connection === 'close') {
             const shouldReconnect = u.lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
             if (shouldReconnect) startDanteV8();
@@ -29,15 +29,18 @@ async function startDanteV8() {
 
         const from = msg.key.remoteJid;
         const pushname = msg.pushName || "Agente";
-        const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
-        if (!body.startsWith('.')) return;
+        
+        // CORREÇÃO DO ERRO 'startsWith': Garantindo que body nunca seja null
+        const messageContent = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || "";
+        const body = messageContent.trim();
+        
+        if (!body || !body.startsWith('.')) return;
 
         const args = body.slice(1).trim().split(/ +/g);
         const cmd = args.shift().toLowerCase();
         
-        // --- LÓGICA DE ALVO ---
-        const mention = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0] || null;
-        let targetJid = mention || (msg.message.extendedTextMessage?.contextInfo?.quotedMessage ? msg.message.extendedTextMessage.contextInfo.participant : null) || from;
+        const mention = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0] || (msg.message.extendedTextMessage?.contextInfo?.quotedMessage ? msg.message.extendedTextMessage.contextInfo.participant : null);
+        let targetJid = mention || from;
         let targetName = mention ? "@" + mention.split('@')[0] : "Alvo";
         let mentions = [targetJid];
 
@@ -47,48 +50,52 @@ async function startDanteV8() {
 
         const enviar = async (texto, path = null, isVid = false) => {
             let caption = topo + texto + rodape;
-            if (path && fs.existsSync(path)) {
-                const buffer = fs.readFileSync(path);
-                if (isVid) {
-                    await client.sendMessage(from, { video: buffer, caption, mentions, gifPlayback: true });
+            // Tenta enviar com mídia, se falhar ou não existir, envia só texto
+            try {
+                if (path && fs.existsSync(path)) {
+                    const buffer = fs.readFileSync(path);
+                    if (isVid) {
+                        await client.sendMessage(from, { video: buffer, caption, mentions, gifPlayback: true });
+                    } else {
+                        await client.sendMessage(from, { image: buffer, caption, mentions });
+                    }
                 } else {
-                    await client.sendMessage(from, { image: buffer, caption, mentions });
+                    await client.sendMessage(from, { text: caption, mentions });
                 }
-            } else {
+            } catch {
                 await client.sendMessage(from, { text: caption, mentions });
             }
         };
 
         switch(cmd) {
             case 'menu':
-                await enviar(`Olá, *${pushname}*! Bem-vindo à Central.\n\n*📂 SETORES DISPONÍVEIS:*\n┝ .menuaura (Rank/Aura)\n┝ .menuinter (Interação/GIFs)\n┝ .menustatus (Medidores)\n┝ .menudiversao (Jogos/Mix)\n┝ .menuadm (Gestão)\n\n_Escolha um setor para ver os comandos!_`, './menu.jpg');
+                await enviar(`Olá, *${pushname}*!\n\n*📂 SETORES DA AGÊNCIA:*\n┝ .menuaura (Rank/Aura)\n┝ .menuinter (Interação)\n┝ .menustatus (Medidores)\n\n_Dante-V8: Inteligência e Estilo._`, './menu.jpg');
                 break;
 
             case 'menuaura':
-                await enviar(`*🌑 SETOR AURA & RANK*\n┝ .rankaura (Ver nível)\n┝ .statusaura\n┝ .todeolho\n┝ .roubar (Aura)\n┝ .doar (Aura)`, './aura.jpg');
+                await enviar(`*🌑 SETOR AURA*\n┝ .rankaura\n┝ .statusaura\n┝ .roubaraura`, './aura.jpg');
                 break;
 
             case 'menuinter':
-                await enviar(`*🧸 SETOR INTERAÇÃO (GIFS)*\n┝ .beijo .tapa .chutar\n┝ .matar .abraçar .cafune\n┝ .dançar .comer .rosa\n┝ .chamego .lutar .lamber`, './brincadeira.jpg');
+                await enviar(`*🧸 SETOR INTERAÇÃO*\n┝ .beijo .tapa .chutar .matar\n┝ .abraçar .cafune .dançar .rosa`, './brincadeira.jpg');
                 break;
 
             case 'menustatus':
-                await enviar(`*📊 SETOR STATUS*\n┝ .gado  .lindo  .gay\n┝ .fiel  .pobre  .rico\n┝ .safado .medo  .sorte`, './status.jpg');
+                await enviar(`*📊 SETOR STATUS*\n┝ .gado .lindo .gay .fiel .safado`, './status.jpg');
                 break;
 
-            // --- COMANDOS DE INTERAÇÃO ---
+            // --- COMANDOS DE INTERAÇÃO (GIFS) ---
             case 'tapa': await enviar(`💥 *${pushname}* deu um tapa em *${targetName}*!`, './tapa.mp4', true); break;
-            case 'beijo': await enviar(`💋 *${pushname}* mandou um beijo para *${targetName}*.`, './beijo.mp4', true); break;
-            case 'matar': await enviar(`⚔️ Alvo *${targetName}* foi eliminado por *${pushname}*!`, './matar.mp4', true); break;
+            case 'beijo': await enviar(`💋 *${pushname}* beijou *${targetName}*!`, './beijo.mp4', true); break;
+            case 'matar': await enviar(`⚔️ *${targetName}* foi eliminado por *${pushname}*!`, './matar.mp4', true); break;
             case 'chutar': await enviar(`👟 *${pushname}* chutou *${targetName}*!`, './chutar.mp4', true); break;
-            case 'abraçar': await enviar(`🫂 *${pushname}* deu um abraço em *${targetName}*!`, './abraco.mp4', true); break;
 
             // --- COMANDOS DE STATUS ---
             case 'lindo': await enviar(`✨ *${targetName}* é ${rdm}% Lindo(a).`, './lindo.mp4', true); break;
-            case 'gado': await enviar(`🐂 Análise de gado: *${targetName}* é ${rdm}% Gado.`, './gado.jpg'); break;
+            case 'gado': await enviar(`🐂 *${targetName}* foi analisado: ${rdm}% Gado.`, './gado.jpg'); break;
             case 'gay': await enviar(`🌈 Medidor de *${targetName}*: ${rdm}% Gay.`, './gay.jpg'); break;
-            case 'rankaura': await enviar(`🏆 *RANK DE AURA*\nUsuário: *${targetName}*\nNível: ${rdm}.450`, './rankaura.mp4', true); break;
+            case 'rankaura': await enviar(`🏆 *RANK DE AURA*\nUsuário: *${targetName}*\nNível: ${rdm}.880`, './rankaura.mp4', true); break;
         }
     });
 }
-startDanteV8().catch(err => console.error(err));
+startDanteV8().catch(err => console.log(err));
